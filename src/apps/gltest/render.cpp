@@ -18,8 +18,33 @@ void render::vertic(tgx::Image<tgx::RGB565>& im, int screen_x, int screen_y, int
     im.clear(tgx::RGB565_Black);
     im.fillTriangle({75, 2}, {40, 90}, {150, 10} , tgx::RGB565_Purple, tgx::RGB565_Magenta);
     auto& lcd = PDA.Display.raw();
-    lcd.pushImage(screen_x, screen_y, w, h, (uint16_t*)im.data());
+    lcd.startWrite();
+    lcd.setAddrWindow(screen_x, screen_y, w, h);
+    lcd.writePixelsDMA((pda2_pixel_ptr_t)im.data(), w * h);
+    lcd.endWrite();
 }
+
+// ─ Для WapWapG: как теперь рисуется этот кадр ─────────────
+    // Раньше тут был lcd.pushImage(...) — высокоуровневый метод
+    // LovyanGFX, сам конвертирующий/свопающий пиксели под формат
+    // панели. Из-за этого на физическом PDA2 цвета уезжали (фиолетовый
+    // становился зелёным/циановым), хотя в симуляторе (где pushImage
+    // был простой SDL-заглушкой) всё было верно — баг был виден
+    // только на живом железе.
+    //
+    // Теперь вызывается тот же низкоуровневый путь, что и обычный
+    // LVGL UI (Launcher/ClockApp и т.д.) — он цвета не портил никогда:
+    //   1. startWrite()     — открыть SPI-транзакцию с панелью
+    //                         (на симе — no-op, см. PdaRawDisplay_Sim)
+    //   2. setAddrWindow()  — задать прямоугольник под кадр
+    //   3. writePixelsDMA() — залить пиксели как есть, без доп.
+    //                         конвертации (ESP32 — DMA в SPI,
+    //                         сим — SDL_UpdateTexture + Present)
+    //   4. endWrite()       — закрыть транзакцию (на симе — no-op)
+    //
+    // Один и тот же вызов работает на обеих платформах без #ifdef —
+    // разный тип указателя на пиксель (lgfx::rgb565_t* на ESP32,
+    // uint16_t* на симе) спрятан за pda2_pixel_ptr_t (Display_Class.h).
 
 /*Не работает массив
  * UPD: замена на glVertexPointer(2, GL_FLOAT, 0, &vertices);

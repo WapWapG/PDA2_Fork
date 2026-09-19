@@ -150,18 +150,33 @@ int Display_Class::width()  { return _logical_w(_rotation); }
 int Display_Class::height() { return _logical_h(_rotation); }
 
 // ── raw() / PdaRawDisplay_Sim ────────────────────────────
+// startWrite/endWrite — no-op на SDL (нет отдельной SPI-транзакции,
+// методы существуют только ради одинаковой сигнатуры с ESP32).
+// setAddrWindow запоминает прямоугольник, writePixelsDMA пишет в
+// него и сразу показывает кадр — как раньше делал pushImage(),
+// но под именами методов реального LGFX_Device.
 static PdaRawDisplay_Sim _raw_display;
 
-void PdaRawDisplay_Sim::pushImage(int32_t x, int32_t y, int32_t w, int32_t h, const uint16_t* data) {
-    SDL_Rect r{ (int)x, (int)y, (int)w, (int)h };
-    SDL_UpdateTexture(_texture, &r, data, w * 2 /*RGB565*/);
+void PdaRawDisplay_Sim::startWrite() {
+}
+
+void PdaRawDisplay_Sim::setAddrWindow(int32_t x, int32_t y, int32_t w, int32_t h) {
+    _win_x = x; _win_y = y; _win_w = w; _win_h = h;
+}
+
+void PdaRawDisplay_Sim::writePixelsDMA(const uint16_t* data, uint32_t len) {
+    (void)len; // ожидается _win_w * _win_h — доверяем вызывающей стороне, как на ESP32
+    SDL_Rect r{ (int)_win_x, (int)_win_y, (int)_win_w, (int)_win_h };
+    SDL_UpdateTexture(_texture, &r, data, _win_w * 2 /*RGB565*/);
     SDL_RenderClear(_renderer);
     SDL_RenderCopy(_renderer, _texture, nullptr, nullptr);
     SDL_RenderPresent(_renderer);
 }
 
+void PdaRawDisplay_Sim::endWrite() {
+}
+
 PdaRawDisplay_Sim& Display_Class::raw() {
     return _raw_display;
 }
-
 #endif // PDA2_SIM

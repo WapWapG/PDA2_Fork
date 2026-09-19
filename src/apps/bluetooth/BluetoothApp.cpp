@@ -17,6 +17,11 @@ static constexpr uint32_t BTN_BG = 0x1e3050;
 static constexpr uint32_t DIS_BG = 0x301818;
 static constexpr uint32_t ROW_BG = 0x182030;
 
+// ── onInit ───────────────────────────────────────────────
+void BluetoothApp::onInit() {
+    // состояние (_focus, _last_state и т.п.) сбрасывается в onOpen()
+}
+
 // ── onOpen ───────────────────────────────────────────────
 void BluetoothApp::onOpen() {
     if (!screen) {

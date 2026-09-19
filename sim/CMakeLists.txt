@@ -34,6 +34,10 @@ target_include_directories(lvgl PUBLIC ${PROJECT_SOURCE_DIR} ${SDL2_INCLUDE_DIRS
 set(PDA2_ROOT     ${PROJECT_SOURCE_DIR}/..)
 set(PDA2CORE_SRC  ${PDA2_ROOT}/lib/PDA2Core/src)
 set(PDA2_APPS_SRC ${PDA2_ROOT}/src)
+set(TINYGL_ROOT   ${PDA2_ROOT}/lib/tinygl)
+
+# ── TinyGL sources ─────────────────────────────────────────
+file(GLOB TINYGL_SOURCES ${TINYGL_ROOT}/src/*.c)
 
 # ── Sources ───────────────────────────────────────────────
 # NOTE: every *_esp32.cpp file is deliberately excluded — only
@@ -60,14 +64,16 @@ set(PDA2_SOURCES
     ${PDA2CORE_SRC}/utility/Usb_Class_sim.cpp
     ${PDA2CORE_SRC}/utility/Wifi_Class_sim.cpp
 
-    # apps — current registered roster (mirrors src/main.cpp)
+    # apps — контрольный тест CRASH-1: возврат к исходному ростеру
     ${PDA2_APPS_SRC}/apps/clock/ClockApp.cpp
     ${PDA2_APPS_SRC}/apps/accel/AccelApp.cpp
     ${PDA2_APPS_SRC}/apps/gltest/GLTestApp.cpp
     ${PDA2_APPS_SRC}/apps/gltest/render.cpp
     ${PDA2_APPS_SRC}/apps/bluetooth/BluetoothApp.cpp
-
-        # Madgwick (AccelApp)
+    # ${PDA2_APPS_SRC}/apps/stub/StubApp.cpp
+    ${PDA2_APPS_SRC}/apps/tinygltest/TinyGLTestApp.cpp
+    
+    # Madgwick (AccelApp)
     ${PROJECT_SOURCE_DIR}/Madgwick/src/MadgwickAHRS.cpp
 
     # tgx (GLTestApp)
@@ -75,6 +81,9 @@ set(PDA2_SOURCES
     ${PROJECT_SOURCE_DIR}/tgx/src/Fonts.cpp
     ${PROJECT_SOURCE_DIR}/tgx/src/Renderer3D.cpp
 
+    # tinygl (TinyGLTestApp)
+    ${TINYGL_SOURCES}
+    
     # cyrillic fonts
     ${PDA2CORE_SRC}/fonts/pda2_cyrillic_12.c
     ${PDA2CORE_SRC}/fonts/pda2_cyrillic_14.c
@@ -91,8 +100,10 @@ add_executable(pda2_sim ${PDA2_SOURCES})
 target_include_directories(pda2_sim PRIVATE
     ${PDA2CORE_SRC}
     ${PDA2_APPS_SRC}
-    ${PROJECT_SOURCE_DIR}/tgx/src            # GLTestApp <tgx.h> — vindar/tgx submodule
-    ${PROJECT_SOURCE_DIR}/Madgwick/src   # AccelApp <MadgwickAHRS.h> — arduino-libraries/MadgwickAHRS submodule
+    ${PROJECT_SOURCE_DIR}/tgx/src
+    ${PROJECT_SOURCE_DIR}/Madgwick/src
+    ${TINYGL_ROOT}/include                                 # ← добавить
+    ${TINYGL_ROOT}/src                                     # ← добавить
 )
 
 target_compile_definitions(pda2_sim PRIVATE
@@ -101,6 +112,9 @@ target_compile_definitions(pda2_sim PRIVATE
 )
 
 target_link_libraries(pda2_sim lvgl SDL2::SDL2 m pthread)
+if(WIN32)
+    target_link_libraries(pda2_sim ws2_32)
+endif()
 
 # ── Debug warnings (kept from the original template) ──────
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
