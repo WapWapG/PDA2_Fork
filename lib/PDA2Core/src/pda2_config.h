@@ -4,28 +4,20 @@
 //  PDA 2 — pda2_config.h
 //  Все пины, адреса и константы ТОЛЬКО здесь.
 //
-//  Архитектура v2.0.14:
-//    ESP32-S3  — главный чип (UI, логика, приложения)
-//    ESP32 WROOM — со-процессор (nRF24, SIM800L, IR RX)
-//    Связь: UART (GPIO 38/39 на S3 / 16-17 на WROOM),
-//           пакетный протокол 0xAA...CRC8
+//  Архитектура (актуально): ESP32-S3-WROOM-1 N16R8 — единственный чип.
+//  Со-процессор ESP32 WROOM-32E полностью удалён (UART-мост более не используется).
 //
-//  PDA2_LITE (v1.0) — вариант на ESP32-S3 без WROOM-моста,
-//    ST7735 128x160 вместо ILI9488, EC11-энкодер вместо тача,
-//    nRF24 напрямую на S3. См. #ifdef PDA2_LITE ниже.
+//  PDA2_LITE — отдельный репозиторий, отдельный pda2_config.h. Не смешивать.
 // ════════════════════════════════════════════════════════
 
 // ── Класс устройства ────────────────────────────────────
 #define PDA2_CLASS_DEVELOPER    0
-#define PDA2_CLASS_COMMUNICATOR 1
-#define PDA2_CLASS_FIELD        2
-#define PDA2_CLASS_MINIMAL      3
 #define PDA2_DEVICE_CLASS       PDA2_CLASS_DEVELOPER
 
-#define PDA2_VERSION "3.0.0"
+#define PDA2_VERSION "3.0.0"   // версия либы PDA2Core / релиза устройства, отдельно от версии доки
 
-// ── Дисплей (SPI) ─────────────────────────────────────────
-  #define PDA2_PIN_CS      10    // дисплей CS
+// ── Дисплей (SPI2/FSPI) ──────────────────────────────────
+  #define PDA2_PIN_CS      10
   #define PDA2_PIN_RST      8
   #define PDA2_PIN_DC       9
   #define PDA2_PIN_MOSI    11
@@ -34,16 +26,13 @@
   #define PDA2_SPI_FREQ    79000000
   #define PDA2_SPI_FREQ_BL 50000
 
-// ── SD карта (только pda2, отдельная SPI-шина) ───────────
-// Раньше shared с дисплеем (MOSI=11/SCK=12) — конфликтовало с
-// LovyanGFX (bus_shared=false, отдельный SPI2_HOST). Теперь своя шина.
+// ── SD карта (отдельная SPI-шина, не протестирована на железе) ──
   #define PDA2_PIN_SD_MOSI  6
   #define PDA2_PIN_SD_SCK   7
   #define PDA2_PIN_SD_MISO 21
   #define PDA2_PIN_SD_CS   42
-// на Lite SD не разведена — GPIO6/7/21/42 заняты под I2S/энкодер/дисплей
 
-// ── I2C — на Lite отсутствует (RTC/IMU/Touch пока не решены) ──
+// ── I2C ───────────────────────────────────────────────────
   #define PDA2_PIN_SDA      4
   #define PDA2_PIN_SCL      5
 
@@ -52,9 +41,10 @@
   #define PDA2_PIN_TOUCH_RST  2
   #define PDA2_I2C_TOUCH   0x38
 
-  // ── RTC / IMU / BME280 / INA219 ─────────────────────────
+  // ── RTC / IMU / Компас / BME280 / INA219 ────────────────
   #define PDA2_I2C_RTC     0x68
   #define PDA2_I2C_IMU     0x69
+  #define PDA2_I2C_COMPASS 0x0D   // это магнитометр, компас отдельно от акселеометра с гироскопом >w<
   #define PDA2_I2C_BME280  0x76
   #define PDA2_I2C_INA219  0x40
 
@@ -65,35 +55,31 @@
   #define PDA2_PIN_I2S_SPK_WS      16
   #define PDA2_PIN_I2S_SPK_BCK     17
   #define PDA2_PIN_I2S_SPK_DATA    18
+  // текущая плата: MAX98357A. Новая плата: PCM5102A → PAM8403 (моно, один канал).
 
-// ── PTT ─────────────────────────────────────────────────
-#define PDA2_PIN_PTT      1   // совпадает в обеих версиях
+// ── Громкость (глобальные кнопки, закреплено) ────────────
+#define PDA2_PIN_VOL_UP     1   // бывший PTT (GPIO1), переиспользован
+#define PDA2_PIN_VOL_DOWN   0   // GPIO0 / BOOT, переиспользован как runtime-кнопка после загрузки
 
-// ── GPS NEO-6M (UART2) — только pda2 ────────────────────
-  #define PDA2_PIN_GPS_RX  40
-  #define PDA2_PIN_GPS_TX  41
-// на Lite GPIO40/41 заняты под Display RST/DC — GPS не разведён
+// ── ESP32-CAM (UART-мост к OV2640) — зарезервировано, не распаяно ──
+#define PDA2_PIN_CAM_UART_TX   38
+#define PDA2_PIN_CAM_UART_RX   39
 
-// ── IR TX — только pda2 ─────────────────────────────────
-  #define PDA2_PIN_IR_TX   47
-// на Lite GPIO47 занят под Encoder DT — IR не разведён
-// IR RX → на WROOM (только pda2)
+// ── Кнопка питания (Pololu Mini Pushbutton Power Switch LV) ─────
+// Схема: узел "A" свитча -> кнопка -> GND (on-only), тот же узел "A"
+// параллельно заведён на PWR_SENSE. Прошивка при нажатии сама
+// готовит выключение и импульсом на PWR_OFF гасит VOUT.
+#define PDA2_PIN_PWR_SENSE   40   // вход, чтение нажатий (узел "A" свитча)
+#define PDA2_PIN_PWR_OFF     41   // выход, импульс = мягкое выключение
 
-// ── nRF24 ────────────────────────────────────────────────
-  // на Lite — напрямую на S3, WROOM-моста нет
-  #define PDA2_PIN_NRF_CE    46
-  #define PDA2_PIN_NRF_CSN    7
-  #define PDA2_PIN_NRF_SCK   18
-  #define PDA2_PIN_NRF_MISO   3
-  #define PDA2_PIN_NRF_MOSI   8
-// на pda2 (S3) nRF24 живёт на WROOM — своих пинов здесь нет
+// ── GPIO45/47 свободны ────────────────────────────────────
+// Ранее резервировались под nRF24 (делил SPI-шину с SD). Модуль
+// исключён из диапазона устройства вместе с SIM800L/GPS/IR —
+// не нужны, mutex SD/nRF24 проектировать не требуется. Пины не
+// зарезервированы, доступны для будущих нужд.
 
-// ── SIM800L → на WROOM (Фаза 3, далёкий ящик, пины TBD) ──
-
-// ── WROOM со-процессор (UART1) — только pda2 ─────────────
-  #define PDA2_PIN_WROOM_TX   38    // S3 → WROOM
-  #define PDA2_PIN_WROOM_RX   39    // WROOM → S3
-  #define PDA2_WROOM_BAUD     460800
+// ── LED ───────────────────────────────────────────────────
+#define PDA2_PIN_LED       48
 
 // ── Экран ───────────────────────────────────────────────
   #define PDA2_SCREEN_W     320
@@ -103,16 +89,14 @@
 // ── UI / Apps ───────────────────────────────────────────
 #define PDA2_MAX_APPS      16
 #define PDA2_ANIM_MS      240
-#define PDA2_GRID_COLS      4    // используется только в GRID-режиме (pda2)
-#define PDA2_ICON_SIZE     60    // используется только в GRID-режиме (pda2)
-// Lite (carousel) размеры иконок пока не заведены — понадобятся
-// когда дойдём до Apps_Class carousel-реализации.
+#define PDA2_GRID_COLS      4
+#define PDA2_ICON_SIZE     60
 
 // ── NotesApp ────────────────────────────────────────────
 #define PDA2_NOTES_MAX_SIZE   8192
 #define PDA2_NOTES_MAX_FILES  20
 
-// ── AccelApp canvas (только pda2 — AccelApp требует IMU, на Lite не заведён) ──
+// ── AccelApp canvas ───────────────────────────────────────
   #define PDA2_ACCEL_CANVAS_W   280
   #define PDA2_ACCEL_CANVAS_H   370
   #define PDA2_ACCEL_CANVAS_X   20
@@ -138,7 +122,7 @@
 #define PDA2_LAUNCHER_CAROUSEL    1
 #define PDA2_LAUNCHER_MODE   PDA2_LAUNCHER_GRID
 
-// ── Touch жесты — только pda2 ───────────────────────────
+// ── Touch жесты ───────────────────────────────────────────
 #define PDA2_HOME_SWIPE_PCT      75
 
 // ── Тема / Система ───────────────────────────────────────
@@ -150,18 +134,13 @@
 // ── Симулятор ─────────────────────────────────────────────
 #define PDA2_SIM_SD_AVAILABLE 1
 
-
 // ── Quick Panel ───────────────────────────────────────────
 #define PDA2_NOTIF_MAX            8
-#define PDA2_QP_SWIPE_TOP_PCT    15   // тач-жест, на Lite не используется
+#define PDA2_QP_SWIPE_TOP_PCT    15
 #define PDA2_QP_NOTIF_H         360
 #define PDA2_QP_SETTINGS_H      200
-
-// Lite QuickPanel — отдельный экран через Launcher (не оверлей-шторка),
-// свои размеры под 128x160 заведём когда дойдём до реализации.
 #define PDA2_QP_ANIM_MS         220
 
 // ── Логирование / NVS ─────────────────────────────────────
-#define PDA2_LOG_LEVEL            3 
+#define PDA2_LOG_LEVEL            3
 #define PDA2_NVS_NS    "pda2"
-

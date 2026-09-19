@@ -1,14 +1,27 @@
 // ════════════════════════════════════════════════════════
 //  PDA 2 — Display_Class_esp32.cpp
-//  LovyanGFX LGFX_PDA2 + LVGL 9.x RENDER_MODE_FULL
+//  LovyanGFX LGFX_PDA2 + LVGL 9.x RENDER_MODE_PARTIAL
 //
-//  Почему FULL:
-//    ILI9488 — 3 байта/пиксель (18-bit SPI).
-//    PARTIAL → несколько транзакций → мерцание.
-//    FULL → один кадр за транзакцию → нет мерцания.
-//    Один буфер в PSRAM (~300KB). Два буфера — PSRAM bus contention (BL-1).
+//  Почему PARTIAL (актуально с v2.0.64):
+//    Ранее FULL считался обязательным из-за предполагаемого TEAR-1
+//    (PARTIAL → несколько транзакций → мерцание). Тест TEST_PARTIAL_RENDER
+//    показал: тиринг воспроизводится ОДИНАКОВО на FULL и PARTIAL — причина
+//    не в режиме рендера, а в отсутствии TE pin на модуле дисплея
+//    (аппаратное ограничение, не устраняется программно ни в одном режиме).
+//    PARTIAL даёт кратный прирост FPS (32-33 против ~9-16 на FULL) без
+//    дополнительных рисков относительно FULL — принят как боевой режим.
 //
-//  Fade-анимации запрещены — вызывают затемнение на ILI9488.
+//  Два буфера в PSRAM (~1/10 экрана каждый). BL-1 (bus contention)
+//  проверен тем же тестом: ≥5 мин под нагрузкой без порчи кадра,
+//  без крашей/зависаний — не подтверждён, двойная буферизация безопасна.
+//
+//  ILI9488 — 3 байта/пиксель (18-bit) по SPI всегда: 16-bit формат
+//  доступен только в параллельном интерфейсе, LovyanGFX сам форсирует
+//  запись выше 16 бит на bus_spi независимо от setColorDepth(). Снижение
+//  битности как путь роста FPS недоступно на этой архитектуре.
+//
+//  Fade-анимации запрещены — вызывают затемнение на ILI9488
+//  (отдельная причина, не связана с tearing).
 //
 //  Компилируется, только если PDA2_SIM НЕ определён —
 //  в сборке симулятора тело пустое (см. Display_Class_sim.cpp).
@@ -85,6 +98,7 @@ public:
 static LGFX_PDA2      _lcd;
 static lv_display_t*  _lv_disp = nullptr;
 static uint8_t*       _buf1 = nullptr;
+static uint8_t*       _buf2 = nullptr;
 
 // ── LVGL flush callback ──────────────────────────────────
 static void _flush_cb(lv_display_t* disp, const lv_area_t* area, uint8_t* px_map) {
@@ -126,22 +140,26 @@ bool Display_Class::begin(uint8_t brightness, uint8_t rotation) {
     lv_init();
     lv_tick_set_cb(_tick_cb);
 
-    // Буфер в PSRAM (RENDER_MODE_FULL)
-    const size_t buf_size = (size_t)_lcd.width() * _lcd.height() * 2;
-    _buf1 = (uint8_t*)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+    // Два буфера в PSRAM, ~1/10 экрана каждый (RENDER_MODE_PARTIAL)
+    const size_t partial_lines = _lcd.height() / 10;
+    const size_t buf_size = (size_t)_lcd.width() * partial_lines * 2;
 
-    if (!_buf1) {
+    _buf1 = (uint8_t*)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+    _buf2 = (uint8_t*)heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM);
+
+    if (!_buf1 || !_buf2) {
         PDA_LOGE("display", "PSRAM alloc failed! buf_size=%u", buf_size);
         return false;  // [A-06]
     }
 
-    PDA_LOGI("display", "LVGL buf: 1 x %u bytes in PSRAM", buf_size);
+    PDA_LOGI("display", "LVGL buf: 2 x %u lines, %u bytes each in PSRAM",
+             partial_lines, buf_size);
 
     // Создать LVGL display
     _lv_disp = lv_display_create(_lcd.width(), _lcd.height());
     lv_display_set_flush_cb(_lv_disp, _flush_cb);
-    lv_display_set_buffers(_lv_disp, _buf1, nullptr, buf_size,
-                       LV_DISPLAY_RENDER_MODE_FULL);
+    lv_display_set_buffers(_lv_disp, _buf1, _buf2, buf_size,
+                       LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     PDA_LOGI("display", "LVGL 9.2.1 ready");
     return true;  // [A-06]

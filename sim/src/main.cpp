@@ -10,6 +10,10 @@
 //   - lv_timer_handler() уже вызывается каждый тик внутри
 //     Apps_Class::tick() (вызывается из PDA.update()) — не вызывать
 //     повторно здесь, иначе LVGL будет качать дважды.
+//
+//  ВРЕМЕННО: возврат к исходному ростеру (Clock/Accel/GLTest/BT)
+//  для контрольного теста CRASH-1 — StubApp убран из регистрации
+//  (проверяем, воспроизводится ли краш в исходных условиях).
 // ════════════════════════════════════════════════════════
 
 #include <PDA2.h>
@@ -19,6 +23,8 @@
 #include "apps/accel/AccelApp.h"
 #include "apps/gltest/GLTestApp.h"
 #include "apps/bluetooth/BluetoothApp.h"
+// #include "apps/stub/StubApp.h"
+#include "apps/tinygltest/TinyGLTestApp.h"
 
 int main(int argc, char** argv) {
     (void)argc; (void)argv;
@@ -30,6 +36,8 @@ int main(int argc, char** argv) {
     PDA.Apps.add(new AccelApp());
     PDA.Apps.add(new GLTestApp());
     PDA.Apps.add(new BluetoothApp());
+    // PDA.Apps.add(new StubApp());
+    PDA.Apps.add(new TinyGLTestApp());
 
     PDA.Apps.start();
 

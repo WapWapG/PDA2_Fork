@@ -35,6 +35,16 @@ public:
     bool    getWifi();
     void    setWifi(bool val);
 
+        // WiFi STA / AP учётки
+    PdaStr32 getWifiSSID();
+    void     setWifiSSID(const PdaStr32& ssid);
+    PdaStr32 getWifiPass();
+    void     setWifiPass(const PdaStr32& pass);
+    PdaStr32 getApSSID();
+    void     setApSSID(const PdaStr32& ssid);
+    PdaStr32 getApPass();
+    void     setApPass(const PdaStr32& pass);
+
      // Bluetooth 
     bool    getBtEnabled();
     void    setBtEnabled(bool val);

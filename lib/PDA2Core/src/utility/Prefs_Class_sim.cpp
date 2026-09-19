@@ -42,6 +42,11 @@ static PdaStr32 _bt_last;        // "" по умолчанию
 static uint8_t  _bt_last_t    = 1;
 static PdaStr32 _bt_last_n;      // "" по умолчанию
 
+static PdaStr32 _wifi_ssid;
+static PdaStr32 _wifi_pass;
+static PdaStr32 _ap_ssid;
+static PdaStr32 _ap_pass;
+
 // ── Сохранение всего набора разом ────────────────────────
 static void _save() {
     FILE* f = fopen(PREFS_FILE, "w");
@@ -55,6 +60,10 @@ static void _save() {
     fprintf(f, "sleep_ms=%u\n", (unsigned)_sleep_ms);
     fprintf(f, "last_app=%d\n", _last_app);
     fprintf(f, "wifi=%d\n", _wifi ? 1 : 0);
+    fprintf(f, "wifi_ssid=%s\n", _wifi_ssid.c_str());
+    fprintf(f, "wifi_pass=%s\n", _wifi_pass.c_str());
+    fprintf(f, "ap_ssid=%s\n", _ap_ssid.c_str());
+    fprintf(f, "ap_pass=%s\n", _ap_pass.c_str());
     fprintf(f, "bt_en=%d\n", _bt_en ? 1 : 0);
     fprintf(f, "bt_last=%s\n", _bt_last.c_str());
     fprintf(f, "bt_last_t=%u\n", _bt_last_t);
@@ -86,6 +95,10 @@ void Prefs_Class::begin() {
         else if (!strcmp(key, "sleep_ms"))   _sleep_ms   = (uint32_t)atol(val);
         else if (!strcmp(key, "last_app"))   _last_app   = (int8_t)atoi(val);
         else if (!strcmp(key, "wifi"))       _wifi       = atoi(val) != 0;
+        else if (!strcmp(key, "wifi_ssid")) _wifi_ssid = val;
+        else if (!strcmp(key, "wifi_pass")) _wifi_pass = val;
+        else if (!strcmp(key, "ap_ssid"))   _ap_ssid   = val;
+        else if (!strcmp(key, "ap_pass"))   _ap_pass   = val;
         else if (!strcmp(key, "bt_en"))      _bt_en      = atoi(val) != 0;
         else if (!strcmp(key, "bt_last"))    _bt_last    = val;
         else if (!strcmp(key, "bt_last_t"))  _bt_last_t  = (uint8_t)atoi(val);
@@ -112,6 +125,15 @@ void   Prefs_Class::setLastApp(int8_t id) { _last_app = id; _save(); }
 
 bool Prefs_Class::getWifi() { return _wifi; }
 void Prefs_Class::setWifi(bool val) { _wifi = val; _save(); }
+
+PdaStr32 Prefs_Class::getWifiSSID() { return _wifi_ssid; }
+void     Prefs_Class::setWifiSSID(const PdaStr32& ssid) { _wifi_ssid = ssid.c_str(); _save(); }
+PdaStr32 Prefs_Class::getWifiPass() { return _wifi_pass; }
+void     Prefs_Class::setWifiPass(const PdaStr32& pass) { _wifi_pass = pass.c_str(); _save(); }
+PdaStr32 Prefs_Class::getApSSID()   { return _ap_ssid; }
+void     Prefs_Class::setApSSID(const PdaStr32& ssid)   { _ap_ssid = ssid.c_str(); _save(); }
+PdaStr32 Prefs_Class::getApPass()   { return _ap_pass; }
+void     Prefs_Class::setApPass(const PdaStr32& pass)   { _ap_pass = pass.c_str(); _save(); }
 
 bool     Prefs_Class::getBtEnabled()                    { return _bt_en; }
 void     Prefs_Class::setBtEnabled(bool v)              { _bt_en = v; _save(); }

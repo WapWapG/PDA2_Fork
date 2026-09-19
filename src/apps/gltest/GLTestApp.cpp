@@ -7,6 +7,9 @@
 // Экран ленивый: строится один раз при первом открытии (screen == nullptr).
 // onInit() LVGL не трогает (см. PDA2App.h / правило "ленивые экраны").
 
+void GLTestApp::onInit() {
+}
+
 void GLTestApp::onOpen() {
     if (!screen) {
         screen = lv_obj_create(nullptr);

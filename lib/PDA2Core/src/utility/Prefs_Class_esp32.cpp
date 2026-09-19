@@ -70,6 +70,15 @@ void Prefs_Class::setWifi(bool val) {
     _prefs.putBool("wifi", val);
 }
 
+PdaStr32 Prefs_Class::getWifiSSID() { return PdaStr32(_prefs.getString("wifi_ssid", "").c_str()); }
+void     Prefs_Class::setWifiSSID(const PdaStr32& ssid) { _prefs.putString("wifi_ssid", ssid.c_str()); }
+PdaStr32 Prefs_Class::getWifiPass() { return PdaStr32(_prefs.getString("wifi_pass", "").c_str()); }
+void     Prefs_Class::setWifiPass(const PdaStr32& pass) { _prefs.putString("wifi_pass", pass.c_str()); }
+PdaStr32 Prefs_Class::getApSSID()   { return PdaStr32(_prefs.getString("ap_ssid", "").c_str()); }
+void     Prefs_Class::setApSSID(const PdaStr32& ssid)   { _prefs.putString("ap_ssid", ssid.c_str()); }
+PdaStr32 Prefs_Class::getApPass()   { return PdaStr32(_prefs.getString("ap_pass", "").c_str()); }
+void     Prefs_Class::setApPass(const PdaStr32& pass)   { _prefs.putString("ap_pass", pass.c_str()); }
+
 bool     Prefs_Class::getBtEnabled()                  { return _prefs.getBool("bt_en", false); }
 void     Prefs_Class::setBtEnabled(bool v)            { _prefs.putBool("bt_en", v); }
 PdaStr32 Prefs_Class::getBtLastDevice()               { return PdaStr32(_prefs.getString("bt_last", "").c_str()); }
